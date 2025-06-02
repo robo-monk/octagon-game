@@ -40,10 +40,13 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Lighting resolution control - change this to adjust lighting quality
+        const LIGHTING_RESOLUTION_MULTIPLIER = 4.0; // Increase for better lighting, decrease for performance
+
         // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 100);
+        scene.background = new THREE.Color(0x000011); // Dark night sky
+        scene.fog = new THREE.Fog(0x000011, 5, 30); // Darker, closer fog
 
         const camera = new THREE.PerspectiveCamera(120, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.6, 0); // Eye height
@@ -51,21 +54,42 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Lighting - much darker for night
+        const ambientLight = new THREE.AmbientLight(0x404080, 0.2); // Even dimmer ambient
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
+        
+        // Torch spotlight - focused beam like horror games
+        const torchLight = new THREE.SpotLight(0xff6600, 5.0, 20, Math.PI / 5, .8, 2);
+        torchLight.castShadow = true;
+        torchLight.shadow.mapSize.width = 2048/2;
+        torchLight.shadow.mapSize.height = 2048/2;
+        torchLight.shadow.camera.near = 0.1;
+        torchLight.shadow.camera.far = 500;
+        scene.add(torchLight);
+
+        // Target for the spotlight to look at
+        const torchTarget = new THREE.Object3D();
+        scene.add(torchTarget);
+        torchLight.target = torchTarget;
+
+        // Optional: Add a very dim point light for subtle fill lighting
+        const fillLight = new THREE.PointLight(0xff4400, 0.3, 8, 2);
+        scene.add(fillLight);
+
+        // Optional: Add a directional light for very dim overall lighting
+        const moonLight = new THREE.DirectionalLight(0x404080, 0.02);
+        moonLight.position.set(10, 10, 5);
+        scene.add(moonLight);
 
         // Materials
-        const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
-        const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
-        const doorMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
-        const doorFrameMaterial = new THREE.MeshLambertMaterial({ color: 0x4B2F20 });
+        const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x606060 });
+        const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x303030 });
+        const ceilingMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
+        const doorMaterial = new THREE.MeshLambertMaterial({ color: 0x6B3410 });
+        const doorFrameMaterial = new THREE.MeshLambertMaterial({ color: 0x3B1F10 });
 
         // Create octagon hub
         const hubRadius = 10;
@@ -76,12 +100,21 @@
         const roomDepth = 8;
         const roomWidth = 6;
 
-        // Floor (extended to cover rooms)
-        const floorGeometry = new THREE.CircleGeometry(hubRadius + roomDepth + 2, 32);
+        // Floor (extended to cover rooms) - using PlaneGeometry for better spotlight reception
+        const floorSize = (hubRadius + roomDepth + 2) * 2;
+        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, 128 * LIGHTING_RESOLUTION_MULTIPLIER, 128 * LIGHTING_RESOLUTION_MULTIPLIER);
         const floor = new THREE.Mesh(floorGeometry, floorMaterial);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
+
+        // Ceiling - using PlaneGeometry for better spotlight reception
+        const ceilingGeometry = new THREE.PlaneGeometry(floorSize, floorSize, 128 * LIGHTING_RESOLUTION_MULTIPLIER, 128 * LIGHTING_RESOLUTION_MULTIPLIER);
+        const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.y = wallHeight;
+        ceiling.receiveShadow = true;
+        // scene.add(ceiling);
 
         // Calculate wall width for octagon side
         const wallWidth = 2 * hubRadius * Math.tan(Math.PI / 8);
@@ -114,7 +147,7 @@
             
             // Left wall segment
             const leftWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness),
+                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness, 4 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             leftWall.position.set(-doorWidth/2 - wallSegmentWidth/2, wallHeight/2, 0);
@@ -123,7 +156,7 @@
 
             // Right wall segment
             const rightWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness),
+                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness, 4 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             rightWall.position.set(doorWidth/2 + wallSegmentWidth/2, wallHeight/2, 0);
@@ -135,7 +168,7 @@
             
             // Top frame
             const topFrame = new THREE.Mesh(
-                new THREE.BoxGeometry(doorWidth + 0.1, 0.2, wallThickness),
+                new THREE.BoxGeometry(doorWidth + 0.1, 0.2, wallThickness, 6 * LIGHTING_RESOLUTION_MULTIPLIER, 1, 1),
                 doorFrameMaterial
             );
             topFrame.position.y = doorHeight;
@@ -143,14 +176,14 @@
 
             // Side frames
             const leftFrame = new THREE.Mesh(
-                new THREE.BoxGeometry(0.1, doorHeight, wallThickness),
+                new THREE.BoxGeometry(0.1, doorHeight, wallThickness, 1, 6 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 doorFrameMaterial
             );
             leftFrame.position.set(-doorWidth/2, doorHeight/2, 0);
             doorFrameGroup.add(leftFrame);
 
             const rightFrame = new THREE.Mesh(
-                new THREE.BoxGeometry(0.1, doorHeight, wallThickness),
+                new THREE.BoxGeometry(0.1, doorHeight, wallThickness, 1, 6 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 doorFrameMaterial
             );
             rightFrame.position.set(doorWidth/2, doorHeight/2, 0);
@@ -167,7 +200,7 @@
             };
             
             const door = new THREE.Mesh(
-                new THREE.BoxGeometry(doorWidth - 0.1, doorHeight - 0.1, 0.1),
+                new THREE.BoxGeometry(doorWidth - 0.1, doorHeight - 0.1, 0.1, 6 * LIGHTING_RESOLUTION_MULTIPLIER, 6 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 doorMaterial
             );
             door.position.set((doorWidth - 0.1)/2, doorHeight/2, 0);
@@ -205,7 +238,7 @@
             
             // Back wall
             const backWall = new THREE.Mesh(
-                new THREE.BoxGeometry(roomWidth, wallHeight, wallThickness),
+                new THREE.BoxGeometry(roomWidth, wallHeight, wallThickness, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             backWall.position.set(0, wallHeight/2, -roomDepth/2);
@@ -213,7 +246,7 @@
 
             // Left room wall
             const leftRoomWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth),
+                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth, 1, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
                 wallMaterial
             );
             leftRoomWall.position.set(-roomWidth/2, wallHeight/2, 0);
@@ -221,24 +254,33 @@
 
             // Right room wall
             const rightRoomWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth),
+                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth, 1, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
                 wallMaterial
             );
             rightRoomWall.position.set(roomWidth/2, wallHeight/2, 0);
             roomGroup.add(rightRoomWall);
 
+            // Room ceiling
+            const roomCeiling = new THREE.Mesh(
+                new THREE.BoxGeometry(roomWidth, wallThickness, roomDepth, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
+                ceilingMaterial
+            );
+            roomCeiling.position.set(0, wallHeight, 0);
+            roomCeiling.receiveShadow = true;
+            roomGroup.add(roomCeiling);
+
             // Connect room to doorway with partial walls
             const connectionWidth = (roomWidth - doorWidth) / 2;
             
             const leftConnection = new THREE.Mesh(
-                new THREE.BoxGeometry(connectionWidth, wallHeight, wallThickness),
+                new THREE.BoxGeometry(connectionWidth, wallHeight, wallThickness, 4 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             leftConnection.position.set(-roomWidth/2 + connectionWidth/2, wallHeight/2, roomDepth/2);
             roomGroup.add(leftConnection);
 
             const rightConnection = new THREE.Mesh(
-                new THREE.BoxGeometry(connectionWidth, wallHeight, wallThickness),
+                new THREE.BoxGeometry(connectionWidth, wallHeight, wallThickness, 4 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             rightConnection.position.set(roomWidth/2 - connectionWidth/2, wallHeight/2, roomDepth/2);
@@ -333,6 +375,19 @@
             requestAnimationFrame(animate);
 
             const delta = clock.getDelta();
+
+            // Update torch position to follow camera
+            const torchOffset = new THREE.Vector3(0.3, -0.2, -0.5); // Slight offset to simulate holding torch
+            torchOffset.applyQuaternion(camera.quaternion);
+            torchLight.position.copy(camera.position).add(torchOffset);
+
+            // Update torch target to point where camera is looking
+            const targetDirection = new THREE.Vector3(0, -0.3, -1); // Angled slightly downward (-0.3 Y component)
+            targetDirection.applyQuaternion(camera.quaternion);
+            torchTarget.position.copy(camera.position).add(targetDirection.multiplyScalar(10));
+
+            // Update fill light position
+            fillLight.position.copy(camera.position);
 
             // Update door animations
             doors.forEach(doorPivot => {
