@@ -136,7 +136,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        const ass = (src) => window.location.origin + window.location.pathname + src;
+        const ass = (src) => new URL("public" + src.startsWith("/") ? src : "/" + src, window.location.origin + window.location.pathname);
 
         // saves camera state to local storage
         function saveCameraState() {
