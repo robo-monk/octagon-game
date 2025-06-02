@@ -136,6 +136,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        const ass = (src) => window.location.origin + window.location.pathname + src;
 
         // saves camera state to local storage
         function saveCameraState() {
@@ -153,7 +154,7 @@
                 images: [
 
                     {
-                        src: "/public/goodhabitz-certificate.png",
+                        src: ass("/goodhabitz-certificate.png"),
                         wallMount: "center",
                         showInSummary: true,
                         width: 2.5,
@@ -169,7 +170,7 @@
                 roomName: "Lino Cutting",
                 images: [
                     {
-                        src: "/public/lin2.jpeg",
+                        src: ass("/lin2.jpeg"),
                         wallMount: "left",
                         width: 2.8,
                         height: 2.2,
@@ -177,7 +178,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/lino.jpeg",
+                        src: ass("/lino.jpeg"),
                         wallMount: "center",
                         width: 3.2,
                         height: 4.1,
@@ -185,7 +186,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/lino3.jpeg",
+                        src: ass("/lino3.jpeg"),
                         wallMount: "right",
                         width: 4.6,
                         height: 5.1,
@@ -200,7 +201,7 @@
                 roomName: "Krama",
                 images: [
                     {
-                        src: "/public/krama1.png",
+                        src: ass("/krama1.png"),
                         wallMount: "center",
                         showInSummary: true,
                         width: 2.5,
@@ -209,7 +210,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/krama2.png",
+                        src: ass("/krama2.png"),
                         wallMount: "left",
                         showInSummary: true,
                         width: 4.4,
@@ -218,7 +219,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/krama3.png",
+                        src: ass("/krama3.png"),
                         wallMount: "right",
                         showInSummary: true,
                         width: 4.4,
@@ -234,7 +235,7 @@
                 roomName: "Memory Lane",
                 images: [
                     {
-                        src: "/public/gundars.jpeg",
+                        src: ass("/gundars.jpeg"),
                         wallMount: "left",
                         showInSummary: true,
                         width: 2.6,
@@ -243,7 +244,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/haha.jpeg",
+                        src: ass("/haha.jpeg"),
                         wallMount: "center",
                         showInSummary: true,
                         width: 3.8,
@@ -252,7 +253,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/michela.jpeg",
+                        src: ass("/michela.jpeg"),
                         wallMount: "left",
                         showInSummary: true,
                         width: 2.8,
@@ -261,7 +262,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/mischa.jpeg",
+                        src: ass("/mischa.jpeg"),
                         wallMount: "right",
                         showInSummary: true,
                         width: 2.8,
@@ -269,7 +270,7 @@
                         x: 0.2,
                         y: 0.5
                     }, {
-                        src: "/public/niall.png",
+                        src: ass("/niall.png"),
                         wallMount: "right",
                         showInSummary: true,
                         width: 3.4,
@@ -285,7 +286,7 @@
                 roomName: "Purple Fields",
                 images: [
                     {
-                        src: "/public/purplefields.jpeg",
+                        src: ass("/purplefields.jpeg"),
                         wallMount: "center",
                         showInSummary: true,
                         width: 2.5,
@@ -301,7 +302,7 @@
                 roomName: "Laptop Stand",
                 images: [
                     {
-                        src: "/public/3d1.png",
+                        src: ass("/3d1.png"),
                         wallMount: "right",
                         showInSummary: true,
                         width: 1.3,
@@ -310,7 +311,7 @@
                         y: 0.5
                     },
                     {
-                        src: "/public/3d3.png",
+                        src: ass("/3d3.png"),
                         wallMount: "left",
                         showInSummary: true,
                         width: 3.8,
@@ -319,7 +320,7 @@
                         y: 0.5
                     }, 
                     {
-                        src: "/public/3d2.png",
+                        src: ass("/3d2.png"),
                         wallMount: "center",
                         showInSummary: true,
                         width: 4.0,
@@ -328,7 +329,7 @@
                         y: 0.5
                     }, 
                     {
-                        src: "/public/3d4.png",
+                        src: ass("/3d4.png"),
                         wallMount: "right",
                         showInSummary: true,
                         width: 4.3,
@@ -343,24 +344,7 @@
                 roomIndex: 6,
                 roomName: "Christmas Tree",
                 images: [
-                    {
-                        src: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400",
-                        wallMount: "left",
-                        showInSummary: true,
-                        width: 1.7,
-                        height: 1.1,
-                        x: 0.5,
-                        y: 0.5
-                    },
-                    {
-                        src: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=400",
-                        wallMount: "center",
-                        showInSummary: true,
-                        width: 1.9,
-                        height: 1.4,
-                        x: 0.5,
-                        y: 0.6
-                    }
+
                 ],
                 text: "Learned how to solder LEDs on christmas tree. Fun and dangerous."
             },
@@ -369,7 +353,7 @@
                 roomName: "Octagon Game",
                 images: [
                     {
-                        src: "/octagon-game.png",
+                        src: ass("/octagon-game.png"),
                         wallMount: "center",
                         showInSummary: true,
                         width: 2.5,
