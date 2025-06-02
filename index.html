@@ -30,6 +30,92 @@
             border-radius: 50%;
             pointer-events: none;
         }
+        #enterPrompt {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        #roomOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #roomContent {
+            background: rgba(20,20,20,0.95);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 80ch;
+            max-height: 80%;
+            overflow-y: auto;
+            text-align: center;
+        }
+        #roomTitle {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        #roomImages {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .roomImage {
+            max-width: 200px;
+            max-height: 150px;
+            border: 3px solid #555;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        #roomText {
+            color: white;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        #backButton {
+            background: linear-gradient(45deg, #4a4a4a, #666);
+            color: white;
+            border: 2px solid #777;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #backButton:hover {
+            background: linear-gradient(45deg, #666, #888);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .blurred {
+            filter: blur(5px);
+            transition: filter 0.3s;
+        }
     </style>
 </head>
 <body>
@@ -37,11 +123,231 @@
         Click to start • WASD to move • Mouse to look • Click doors to open
     </div>
     <div id="crosshair"></div>
+    <div id="enterPrompt">Press ENTER to examine room</div>
+    
+    <div id="roomOverlay">
+        <div id="roomContent">
+            <div id="roomTitle"></div>
+            <!-- <div id="roomImages"></div> -->
+            <div id="roomText"></div>
+            <button id="backButton">Back</button>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+
+        // saves camera state to local storage
+        function saveCameraState() {
+            localStorage.setItem('cameraState', JSON.stringify({
+                position: camera.position.toArray(),
+                rotation: camera.rotation.toArray()
+            }));
+        }
+
+        // Room map configuration
+        const roomMap = [
+            {
+                roomIndex: 0,
+                roomName: "Make up your mind",
+                images: [
+
+                    {
+                        src: "/public/goodhabitz-certificate.png",
+                        wallMount: "center",
+                        showInSummary: true,
+                        width: 2.5,
+                        height: 2.5,
+                        x: 0.5,
+                        y: 0.5
+                    }
+                ],
+                text: "Nothing to exciting. Just completed a GoodHabitz course. It was ok."
+            },
+            {
+                roomIndex: 1,
+                roomName: "Library",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+                        wallMount: "left",
+                        showInSummary: true,
+                        width: 1.8,
+                        height: 1.2,
+                        x: 0.5,
+                        y: 0.5
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400",
+                        wallMount: "right",
+                        showInSummary: true,
+                        width: 1.6,
+                        height: 1.1,
+                        x: 0.5,
+                        y: 0.6
+                    }
+                ],
+                text: "The library houses an extensive collection of technical manuals, research documents, and digital archives. Quiet study areas provide spaces for research and analysis. The knowledge stored here is crucial for understanding the facility's complex systems and protocols."
+            },
+            {
+                roomIndex: 2,
+                roomName: "Lab",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1581093458791-9d42e2c9a47b?w=400",
+                        wallMount: "center",
+                        showInSummary: true,
+                        width: 2.2,
+                        height: 1.4,
+                        x: 0.5,
+                        y: 0.5
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400",
+                        wallMount: "right",
+                        showInSummary: true,
+                        width: 1.4,
+                        height: 1.0,
+                        x: 0.3,
+                        y: 0.6
+                    }
+                ],
+                text: "The laboratory is equipped with advanced scientific instruments and analysis equipment. Research projects are conducted here, studying samples and conducting experiments. Safety protocols are strictly enforced due to the sensitive nature of the work performed in this facility."
+            },
+            {
+                roomIndex: 3,
+                roomName: "Office",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400",
+                        wallMount: "left",
+                        showInSummary: true,
+                        width: 1.6,
+                        height: 1.2,
+                        x: 0.7,
+                        y: 0.5
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=400",
+                        wallMount: "center",
+                        showInSummary: true,
+                        width: 1.8,
+                        height: 1.3,
+                        x: 0.5,
+                        y: 0.5
+                    }
+                ],
+                text: "The office serves as an administrative center where reports are filed, communications are managed, and facility operations are coordinated. Multiple workstations provide access to the central database and communication networks."
+            },
+            {
+                roomIndex: 4,
+                roomName: "Armory",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1595590424283-b8f17842773f?w=400",
+                        wallMount: "left",
+                        showInSummary: true,
+                        width: 1.5,
+                        height: 1.0,
+                        x: 0.5,
+                        y: 0.6
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
+                        wallMount: "right",
+                        showInSummary: true,
+                        width: 1.4,
+                        height: 1.1,
+                        x: 0.5,
+                        y: 0.5
+                    }
+                ],
+                text: "The armory contains security equipment and protective gear necessary for facility defense. Access is strictly controlled, and all equipment is regularly maintained and inventoried. Emergency protocols dictate when and how these resources may be deployed."
+            },
+            {
+                roomIndex: 5,
+                roomName: "Medical",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=400",
+                        wallMount: "center",
+                        showInSummary: true,
+                        width: 2.0,
+                        height: 1.3,
+                        x: 0.5,
+                        y: 0.5
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400",
+                        wallMount: "right",
+                        showInSummary: true,
+                        width: 1.3,
+                        height: 1.0,
+                        x: 0.6,
+                        y: 0.6
+                    }
+                ],
+                text: "The medical bay is fully equipped to handle health emergencies and routine medical care. Advanced diagnostic equipment and treatment facilities ensure the wellbeing of all facility personnel. Medical supplies are carefully monitored and restocked regularly."
+            },
+            {
+                roomIndex: 6,
+                roomName: "Engine",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400",
+                        wallMount: "left",
+                        showInSummary: true,
+                        width: 1.7,
+                        height: 1.1,
+                        x: 0.5,
+                        y: 0.5
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=400",
+                        wallMount: "center",
+                        showInSummary: true,
+                        width: 1.9,
+                        height: 1.4,
+                        x: 0.5,
+                        y: 0.6
+                    }
+                ],
+                text: "The engine room houses the facility's primary power generation and life support systems. Massive generators and cooling systems maintain optimal facility operations. Only certified engineers are authorized to perform maintenance on these critical systems."
+            },
+            {
+                roomIndex: 7,
+                roomName: "Bridge",
+                images: [
+                    {
+                        src: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400",
+                        wallMount: "left",
+                        showInSummary: true,
+                        width: 1.6,
+                        height: 1.2,
+                        x: 0.4,
+                        y: 0.5
+                    },
+                    {
+                        src: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400",
+                        wallMount: "center",
+                        showInSummary: true,
+                        width: 2.1,
+                        height: 1.3,
+                        x: 0.5,
+                        y: 0.5
+                    }
+                ],
+                text: "The bridge serves as the facility's command and control center. Multiple monitoring stations provide real-time status of all facility systems. From here, operators can coordinate activities, monitor security, and respond to any emergencies that may arise."
+            }
+        ];
+
+        // Game state
+        let isPaused = false;
+        let currentRoom = -1;
+        let inRoom = false;
+
         // Lighting resolution control - change this to adjust lighting quality
-        const LIGHTING_RESOLUTION_MULTIPLIER = 4.0; // Increase for better lighting, decrease for performance
+        const LIGHTING_RESOLUTION_MULTIPLIER = 5.0; // Increase for better lighting, decrease for performance
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -49,7 +355,15 @@
         scene.fog = new THREE.Fog(0x000011, 5, 30); // Darker, closer fog
 
         const camera = new THREE.PerspectiveCamera(120, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.6, 0); // Eye height
+        const cameraState = JSON.parse(localStorage.getItem('cameraState'));
+        if (cameraState) {
+            camera.position.set(cameraState.position[0], cameraState.position[1], cameraState.position[2]);
+            camera.rotation.set(cameraState.rotation[0], cameraState.rotation[1], cameraState.rotation[2]);
+        } else {
+            camera.position.set(0, 2.0, 0); // Eye height
+        }
+
+        setInterval(saveCameraState, 100);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -64,8 +378,8 @@
         // Torch spotlight - focused beam like horror games
         const torchLight = new THREE.SpotLight(0xff6600, 5.0, 20, Math.PI / 5, .8, 2);
         torchLight.castShadow = true;
-        torchLight.shadow.mapSize.width = 2048/2;
-        torchLight.shadow.mapSize.height = 2048/2;
+        torchLight.shadow.mapSize.width = 2048;
+        torchLight.shadow.mapSize.height = 2048;
         torchLight.shadow.camera.near = 0.1;
         torchLight.shadow.camera.far = 500;
         scene.add(torchLight);
@@ -121,10 +435,6 @@
 
         // Doors and walls
         const doors = [];
-        const doorLabels = [
-            "Storage", "Library", "Lab", "Office", 
-            "Armory", "Medical", "Engine", "Bridge"
-        ];
 
         for (let i = 0; i < 8; i++) {
             const angle = (i * Math.PI * 2) / 8;
@@ -147,7 +457,7 @@
             
             // Left wall segment
             const leftWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness, 4 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
+                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             leftWall.position.set(-doorWidth/2 - wallSegmentWidth/2, wallHeight/2, 0);
@@ -156,7 +466,7 @@
 
             // Right wall segment
             const rightWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness, 4 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
+                new THREE.BoxGeometry(wallSegmentWidth, wallHeight, wallThickness, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             rightWall.position.set(doorWidth/2 + wallSegmentWidth/2, wallHeight/2, 0);
@@ -196,7 +506,8 @@
                 isOpen: false, 
                 angle: 0,
                 roomId: i,
-                label: doorLabels[i]
+                // label: doorLabels[i]
+                label: roomMap[i].roomName
             };
             
             const door = new THREE.Mesh(
@@ -213,7 +524,7 @@
 
             // Add label
             const labelCanvas = document.createElement('canvas');
-            labelCanvas.width = 256;
+            labelCanvas.width = roomMap[i].roomName.length * 16 + 8;
             labelCanvas.height = 64;
             const ctx = labelCanvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -221,7 +532,7 @@
             ctx.fillStyle = 'black';
             ctx.font = 'bold 36px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(doorLabels[i], 128, 45);
+            ctx.fillText(roomMap[i].roomName, 128, 45);
 
             const labelTexture = new THREE.CanvasTexture(labelCanvas);
             const labelMaterial = new THREE.MeshBasicMaterial({ map: labelTexture });
@@ -238,7 +549,7 @@
             
             // Back wall
             const backWall = new THREE.Mesh(
-                new THREE.BoxGeometry(roomWidth, wallHeight, wallThickness, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
+                new THREE.BoxGeometry(roomWidth, wallHeight, wallThickness, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 1),
                 wallMaterial
             );
             backWall.position.set(0, wallHeight/2, -roomDepth/2);
@@ -246,7 +557,7 @@
 
             // Left room wall
             const leftRoomWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth, 1, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
+                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth, 1, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
                 wallMaterial
             );
             leftRoomWall.position.set(-roomWidth/2, wallHeight/2, 0);
@@ -254,7 +565,7 @@
 
             // Right room wall
             const rightRoomWall = new THREE.Mesh(
-                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth, 1, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
+                new THREE.BoxGeometry(wallThickness, wallHeight, roomDepth, 1, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
                 wallMaterial
             );
             rightRoomWall.position.set(roomWidth/2, wallHeight/2, 0);
@@ -262,7 +573,7 @@
 
             // Room ceiling
             const roomCeiling = new THREE.Mesh(
-                new THREE.BoxGeometry(roomWidth, wallThickness, roomDepth, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 1, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
+                new THREE.BoxGeometry(roomWidth, wallThickness, roomDepth, 16 * LIGHTING_RESOLUTION_MULTIPLIER, 1, 12 * LIGHTING_RESOLUTION_MULTIPLIER),
                 ceilingMaterial
             );
             roomCeiling.position.set(0, wallHeight, 0);
@@ -287,6 +598,9 @@
             roomGroup.add(rightConnection);
 
             sectionGroup.add(roomGroup);
+            
+            // Create 3D posters for this room
+            createRoomPosters(sectionGroup, i);
         }
 
         // FPS Controls
@@ -330,20 +644,134 @@
 
         // Keyboard controls
         document.addEventListener('keydown', (event) => {
+            if (isPaused) return; // Ignore movement when paused
+            
             switch (event.code) {
                 case 'KeyW': moveForward = true; break;
                 case 'KeyS': moveBackward = true; break;
                 case 'KeyD': moveRight = true; break;
                 case 'KeyA': moveLeft = true; break;
+                case 'Enter':
+                    if (inRoom && currentRoom >= 0) {
+                        showRoomOverlay(currentRoom);
+                    }
+                    break;
             }
         });
 
         document.addEventListener('keyup', (event) => {
+            if (isPaused) return; // Ignore movement when paused
+            
             switch (event.code) {
                 case 'KeyW': moveForward = false; break;
                 case 'KeyS': moveBackward = false; break;
                 case 'KeyD': moveRight = false; break;
                 case 'KeyA': moveLeft = false; break;
+            }
+        });
+
+        // Room detection function
+        function detectRoom() {
+            const playerPos = camera.position;
+            const hubRadius = 10;
+            const roomDepth = 8;
+            const roomWidth = 6;
+            
+            // Check if player is outside the hub
+            const distanceFromCenter = Math.sqrt(playerPos.x * playerPos.x + playerPos.z * playerPos.z);
+            
+            if (distanceFromCenter > hubRadius - 1) {
+                // Determine which room based on angle
+                let angle = Math.atan2(-playerPos.x, -playerPos.z);
+                if (angle < 0) angle += Math.PI * 2;
+                
+                // Each room occupies 45 degrees (PI/4 radians)
+                let roomIndex = Math.floor((angle + Math.PI/8) / (Math.PI/4));
+                roomIndex = roomIndex % 8;
+                
+                // Check if player is actually in the room area (not just past the hub)
+                const roomAngle = roomIndex * Math.PI * 2 / 8;
+                const expectedX = -Math.sin(roomAngle) * (hubRadius + roomDepth/2);
+                const expectedZ = -Math.cos(roomAngle) * (hubRadius + roomDepth/2);
+                
+                const distanceToRoomCenter = Math.sqrt(
+                    (playerPos.x - expectedX) ** 2 + 
+                    (playerPos.z - expectedZ) ** 2
+                );
+                
+                if (distanceToRoomCenter < roomWidth && distanceFromCenter > hubRadius + 1) {
+                    if (currentRoom !== roomIndex) {
+                        currentRoom = roomIndex;
+                        inRoom = true;
+                        document.getElementById('enterPrompt').style.display = 'block';
+                    }
+                    return;
+                }
+            }
+            
+            // Player is not in any room
+            if (inRoom) {
+                inRoom = false;
+                currentRoom = -1;
+                document.getElementById('enterPrompt').style.display = 'none';
+            }
+        }
+
+        // Show room overlay function
+        function showRoomOverlay(roomIndex) {
+            const room = roomMap[roomIndex];
+            if (!room) return;
+            
+            isPaused = true;
+            
+            // Blur the canvas
+            renderer.domElement.classList.add('blurred');
+            
+            // Populate overlay content
+            document.getElementById('roomTitle').textContent = room.roomName;
+            document.getElementById('roomText').textContent = room.text;
+            
+            // Clear and populate images
+            // const imagesContainer = document.getElementById('roomImages');
+            // imagesContainer.innerHTML = '';
+            
+            // if (room.images) {
+            //     room.images.forEach((imageData, index) => {
+            //         if (!imageData.showInSummary) return;
+
+            //         const img = document.createElement('img');
+            //         img.src = imageData.src;
+            //         img.className = 'roomImage';
+            //         img.alt = `${room.roomName} - ${imageData.wallMount.charAt(0).toUpperCase() + imageData.wallMount.slice(1)} Wall`;
+            //         img.style.width = `${imageData.width}px`;
+            //         img.style.height = `${imageData.height}px`;
+            //         img.style.transform = `translate(${imageData.x * 100}%) translateY(${imageData.y * 100}%)`;
+            //         imagesContainer.appendChild(img);
+            //     });
+            // }
+            
+            // Show overlay
+            document.getElementById('roomOverlay').style.display = 'flex';
+            document.getElementById('enterPrompt').style.display = 'none';
+        }
+
+        // Hide room overlay function
+        function hideRoomOverlay() {
+            isPaused = false;
+            renderer.domElement.classList.remove('blurred');
+            document.getElementById('roomOverlay').style.display = 'none';
+            if (inRoom) {
+                document.getElementById('enterPrompt').style.display = 'block';
+            }
+        }
+
+        // Back button event listener
+        document.getElementById('backButton').addEventListener('click', hideRoomOverlay);
+
+        // Also allow ESC key to close overlay
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Escape' && isPaused) {
+                hideRoomOverlay();
             }
         });
 
@@ -371,13 +799,24 @@
         // Animation loop
         const clock = new THREE.Clock();
 
+        
+
         function animate() {
             requestAnimationFrame(animate);
 
             const delta = clock.getDelta();
 
+            // Skip updates if game is paused
+            if (isPaused) {
+                renderer.render(scene, camera);
+                return;
+            }
+
+            // Detect current room
+            detectRoom();
+
             // Update torch position to follow camera
-            const torchOffset = new THREE.Vector3(0.3, -0.2, -0.5); // Slight offset to simulate holding torch
+            const torchOffset = new THREE.Vector3(0.3, -0.2, 0); // Slight offset to simulate holding torch
             torchOffset.applyQuaternion(camera.quaternion);
             torchLight.position.copy(camera.position).add(torchOffset);
 
@@ -434,6 +873,62 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth*2, window.innerHeight*2);
         });
+
+        // Function to create 3D posters in rooms
+        function createRoomPosters(sectionGroup, roomIndex) {
+            const room = roomMap[roomIndex];
+            if (!room || !room.images) return;
+
+            const roomDepth = 8;
+            const roomWidth = 6;
+            const wallHeight = 4;
+            const wallThickness = 0.3;
+
+            room.images.forEach((imageData, index) => {
+                if (imageData.wallMount === "none") return;
+
+                // Create poster geometry
+                const posterGeometry = new THREE.PlaneGeometry(imageData.width, imageData.height, 8 * LIGHTING_RESOLUTION_MULTIPLIER, 8 * LIGHTING_RESOLUTION_MULTIPLIER);
+                
+                // Load texture
+                const textureLoader = new THREE.TextureLoader();
+                const posterTexture = textureLoader.load(imageData.src);
+                const posterMaterial = new THREE.MeshLambertMaterial({ 
+                    map: posterTexture,
+                    transparent: true
+                });
+                
+                const poster = new THREE.Mesh(posterGeometry, posterMaterial);
+                
+                // Position based on wall mount and x,y coordinates
+                let wallX = 0, wallZ = 0, wallRotationY = 0;
+                
+                if (imageData.wallMount === "left") {
+                    wallX = -roomWidth/2 + wallThickness/2 + 0.01;
+                    wallZ = -roomDepth/2 + (imageData.x * roomDepth);
+                    wallRotationY = Math.PI/2;
+                } else if (imageData.wallMount === "right") {
+                    wallX = roomWidth/2 - wallThickness/2 - 0.01;
+                    wallZ = -roomDepth/2 + (imageData.x * roomDepth);
+                    wallRotationY = -Math.PI/2;
+                } else if (imageData.wallMount === "center") {
+                    wallX = (imageData.x - 0.5) * roomWidth;
+                    wallZ = -roomDepth/2 + wallThickness/2 + 0.01;
+                    wallRotationY = 0;
+                }
+                
+                poster.position.set(
+                    wallX,
+                    imageData.y * wallHeight,
+                    wallZ - roomDepth/2 - wallThickness/2
+                );
+                poster.rotation.y = wallRotationY;
+                poster.castShadow = true;
+                poster.receiveShadow = true;
+                
+                sectionGroup.add(poster);
+            });
+        }
     </script>
 </body>
 </html>
